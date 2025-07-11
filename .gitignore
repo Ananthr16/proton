@@ -1,0 +1,8 @@
+# .gitignore
+instrumenter
+bracer
+*.o
+*.out
+OutFile.txt
+*.gmon.out
+/tmp/
