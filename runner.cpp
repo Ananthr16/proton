@@ -110,3 +110,10 @@ void Runner::cleanup() {
         std::cerr << "Warning: failed to remove temp directory." << std::endl;
     }
 }
+
+//instead of having so many things, 
+// have run system
+// encapsulat the system command 
+// wrapp
+// just call api 
+// runner can also be coded 

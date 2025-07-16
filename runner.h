@@ -6,7 +6,7 @@
 
 class Runner {
 public:
-    // Main function to run the full pipeline
+    
     int run(const std::string& sourceFilePath);
 
 private:
@@ -15,7 +15,7 @@ private:
     std::string fileName;
     std::string property;
 
-    // Step-by-step helpers
+    
     bool runBracer(const std::string& filePath);
     std::string determineInstrumentInput();
     bool runInstrumenter(const std::string& filePath);
@@ -25,4 +25,4 @@ private:
     void cleanup();
 };
 
-#endif // RUNNER_H
+#endif 
