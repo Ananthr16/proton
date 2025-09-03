@@ -14,7 +14,7 @@ static int run_gl(const std::string& file, const std::string& unwind, int timeou
         " run-gl-uw.sh " + file + " " + unwind +
         " > " + file + ".err";
   
-    return runCommand(cmd, /*silent=*/false);
+    return runCommand(cmd, false);
 }
 
 
@@ -24,7 +24,7 @@ static int run_kissat(const std::string& file, const std::string& unwind, int ti
         "timeout " + std::to_string(timeout_sec) +
         " run-kissat-uw.sh " + file + " " + unwind +
         " > " + file + ".err";
-    return runCommand(cmd, /*silent=*/false);
+    return runCommand(cmd, false);
 }
 
 
@@ -33,14 +33,14 @@ static int run_z3(const std::string& file, const std::string& unwind) {
     const std::string cmd =
         "run-z3-uw.sh " + file + " " + unwind +
         " > " + file + ".err";
-    return runCommand(cmd, /*silent=*/false);
+    return runCommand(cmd, false);
 }
 
 int run_one_bounty(const std::string& file) {
 
     {
         const std::string grepCmd = "grep -ql 'recurrent state' " + file;
-        int grepResult = runCommand(grepCmd, /*silent=*/true);
+        int grepResult = runCommand(grepCmd, true);
         if (grepResult != 0) {
             std::cout << "RSA ABSENT" << std::endl;
             return 2; 
@@ -105,7 +105,7 @@ int run_one_bounty(const std::string& file) {
         }
 
       
-        int kistat = run_kissat(file, std::to_string(uw), /*timeout_sec=*/remaining);
+        int kistat = run_kissat(file, std::to_string(uw), remaining);
         if (kistat == 10) {
             std::cout << "KISSAT found termination at unwind " << uw << std::endl;
             return 10;

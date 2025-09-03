@@ -68,7 +68,7 @@ bool Runner::runBracer(const std::string& filePath) {
     std::string command = "bracer -in " + filePath + " -c > OutFile.txt";
     std::cout << command << std::endl;
     std::cout << std::filesystem::current_path() << std::endl;
-    return runCommand(command) == 0;   // <-- replaced system()
+    return runCommand(command) == 0; 
 }
 
 std::string Runner::determineInstrumentInput() {
@@ -88,7 +88,7 @@ std::string Runner::determineInstrumentInput() {
 
 bool Runner::runInstrumenter(const std::string& filePath) {
     std::string command = "instrumenter -in " + filePath + " -c";
-    return runCommand(command) == 0;   // <-- replaced system()
+    return runCommand(command) == 0;   
 }
 
 std::string Runner::findInstrumentedFile(const std::string& origFile) {

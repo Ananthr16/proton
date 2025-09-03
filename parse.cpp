@@ -49,3 +49,4 @@ void parsePropertyFile(const std::string& propFilePath) {
     }
 
     file.close();
+}

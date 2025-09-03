@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdlib>
-#include "utils.h"   // use our wrapper
+#include "utils.h"   
 
 int run_gl_uw(const std::string& infile, const std::string& unwind) {
     std::cout << "UNWIND=" << unwind << std::endl;
@@ -19,7 +19,7 @@ int run_gl_uw(const std::string& infile, const std::string& unwind) {
 
     std::cout << command << std::endl;
 
-    // Use wrapper instead of raw system()
+  
     int ev = runCommand(command);
 
     std::cout << "EXIT STATUS is " << ev << std::endl;
