@@ -1,107 +1,117 @@
+// run-one-bounty.cpp
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
-#include <cstdlib>
 #include <chrono>
-#include <thread>
-#include <filesystem>
-#include <cstdio>
-#include <sstream>
+#include "utils.h"   
 
-using namespace std;
 
-int run_gl_dummy(const string&, const string&, int) {
-    return 137;
+static int run_gl(const std::string& file, const std::string& unwind, int timeout_sec) {
+    std::cout << "RUNNING GL for unwind " << unwind << std::endl;
+    const std::string cmd =
+        "timeout " + std::to_string(timeout_sec) +
+        " run-gl-uw.sh " + file + " " + unwind +
+        " > " + file + ".err";
+  
+    return runCommand(cmd, /*silent=*/false);
 }
 
-int run_gl(const string& file, const string& unwind, int timeout_sec) {
-    cout << "RUNNING GL for unwind " << unwind << endl;
-    string command = "timeout " + to_string(timeout_sec) + " run-gl-uw.sh " + file + " " + unwind + " > " + file + ".err";
-    int status = system(command.c_str()) / 256;
 
-    if (status == 10) {
-        cout << "FALSE(termination)" << endl;
-        exit(status);
-    }
-    return status;
+static int run_kissat(const std::string& file, const std::string& unwind, int timeout_sec) {
+    std::cout << "RUNNING KISSAT for unwind " << unwind << std::endl;
+    const std::string cmd =
+        "timeout " + std::to_string(timeout_sec) +
+        " run-kissat-uw.sh " + file + " " + unwind +
+        " > " + file + ".err";
+    return runCommand(cmd, /*silent=*/false);
 }
 
-int run_ki(const string& file, const string& unwind, int timeout_sec) {
-    cout << "RUNNING KISSAT for unwind " << unwind << endl;
-    string command = "timeout " + to_string(timeout_sec) + " run-kissat-uw.sh " + file + " " + unwind + " > " + file + ".err";
-    int status = system(command.c_str()) / 256;
 
-    if (status == 10) {
-        cout << "FALSE(termination)" << endl;
-        exit(status);
-    }
-    return status;
+static int run_z3(const std::string& file, const std::string& unwind) {
+    std::cout << "RUNNING Z3 for unwind " << unwind << std::endl;
+    const std::string cmd =
+        "run-z3-uw.sh " + file + " " + unwind +
+        " > " + file + ".err";
+    return runCommand(cmd, /*silent=*/false);
 }
 
-int run_z3(const string& file, const string& unwind) {
-    cout << "RUNNING Z3 for unwind " << unwind << endl;
-    string command = "run-z3-uw.sh " + file + " " + unwind + " > " + file + ".err";
-    int status = system(command.c_str()) / 256;
+int run_one_bounty(const std::string& file) {
 
-    if (status == 10) {
-        cout << "FALSE(termination)" << endl;
-        exit(status);
+    {
+        const std::string grepCmd = "grep -ql 'recurrent state' " + file;
+        int grepResult = runCommand(grepCmd, /*silent=*/true);
+        if (grepResult != 0) {
+            std::cout << "RSA ABSENT" << std::endl;
+            return 2; 
+        }
     }
 
-    if (status == 6 || status == 137) {
-        cout << "Z3 error or OUT OF MEM on unwind " << unwind << "." << endl;
-        exit(status);
-    }
-
-    return status;
-}
-
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cerr << "Usage: ./run-one-bounty <filename>" << endl;
-        return 1;
-    }
-
-    string file = argv[1];
-
-    if (system(("grep -ql 'recurrent state' " + file).c_str()) != 0) {
-        cout << "RSA ABSENT" << endl;
-        return 2;
-    }
-
-    vector<int> numbers = {2, 3, 4, 10, 12, 20, 40, 100, 1000};
+ 
+    const std::vector<int> unwinds = {2, 3, 4, 10, 12, 20, 40, 100, 1000};
     int max_time = 210;
-    auto start_time = chrono::steady_clock::now();
+    const auto t0 = std::chrono::steady_clock::now();
 
-    auto elapsed_time = [&]() {
-        return chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
+    auto elapsed = [&]() -> int {
+        return static_cast<int>(
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - t0).count());
     };
 
-    for (int num : numbers) {
-        int remaining_time = max_time - elapsed_time();
-        if (remaining_time <= 0) {
-            run_z3(file, to_string(num));
+    for (int uw : unwinds) {
+        int remaining = max_time - elapsed();
+        if (remaining <= 0) {
+            
+            int zstat = run_z3(file, std::to_string(uw));
+            if (zstat == 10) {
+                std::cout << "Termination found at unwind " << uw << " by Z3\n";
+                return 10;
+            }
+        
             continue;
         }
 
-        int status = run_gl_dummy(file, to_string(num), remaining_time);
 
-        if (status == 6 || status == 137) {
-            cout << "GLUCOSE error or OUT OF MEM on unwind " << num << ". exit_status=" << status << endl;
+        int glstat = run_gl(file, std::to_string(uw), remaining);
+
+        if (glstat == 10) {
+            std::cout << "Termination found at unwind " << uw << " by GL\n";
+            return 10;
+        }
+
+        if (glstat == 6 || glstat == 137) {
+            std::cout << "GLUCOSE error or OUT OF MEM on unwind " << uw
+                      << ". exit_status=" << glstat << std::endl;
+           
             max_time = 0;
-            run_z3(file, to_string(num));
+            int zstat = run_z3(file, std::to_string(uw));
+            if (zstat == 10) {
+                std::cout << "Termination found at unwind " << uw << " by Z3\n";
+                return 10;
+            }
             continue;
         }
 
-        if (status == 124) {
-            cout << "GLUCOSE timed out on unwind " << num << "." << endl;
+        if (glstat == 124) {
+            std::cout << "GLUCOSE timed out on unwind " << uw << ".\n";
+           
             max_time = 0;
-            run_z3(file, to_string(num));
+            int zstat = run_z3(file, std::to_string(uw));
+            if (zstat == 10) {
+                std::cout << "Termination found at unwind " << uw << " by Z3\n";
+                return 10;
+            }
             continue;
+        }
+
+      
+        int kistat = run_kissat(file, std::to_string(uw), /*timeout_sec=*/remaining);
+        if (kistat == 10) {
+            std::cout << "KISSAT found termination at unwind " << uw << std::endl;
+            return 10;
         }
     }
 
-    cout << "run-one-bounty completed successfully within the time limit." << endl;
-    return 1;
+    std::cout << "run-one-bounty completed successfully within the time limit." << std::endl;
+    return 1; 
 }

@@ -65,5 +65,4 @@ public:
 //optional
     static std::string propToString(PropertyType p);
 };
-
 #endif

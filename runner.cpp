@@ -1,6 +1,9 @@
 // Runner.cpp
-#include "Runner.h"
+#include "run-gl-and-z3.h"
+#include "llm-t-check.h"
+#include "runner.h"
 #include "Options.h"
+#include "utils.h"   
 #include <iostream>
 #include <cstdlib>
 #include <filesystem>
@@ -39,6 +42,7 @@ int Runner::run(const std::string& sourceFilePath) {
     }
 
     std::string instrumentInput = determineInstrumentInput();
+    std::cout << "[DEBUG] Instrumenting file: " << instrumentInput << std::endl;
 
     if (!runInstrumenter(instrumentInput)) {
         std::cerr << "Instrumenter failed." << std::endl;
@@ -62,7 +66,9 @@ int Runner::run(const std::string& sourceFilePath) {
 
 bool Runner::runBracer(const std::string& filePath) {
     std::string command = "bracer -in " + filePath + " -c > OutFile.txt";
-    return system(command.c_str()) == 0;
+    std::cout << command << std::endl;
+    std::cout << std::filesystem::current_path() << std::endl;
+    return runCommand(command) == 0;   // <-- replaced system()
 }
 
 std::string Runner::determineInstrumentInput() {
@@ -82,7 +88,7 @@ std::string Runner::determineInstrumentInput() {
 
 bool Runner::runInstrumenter(const std::string& filePath) {
     std::string command = "instrumenter -in " + filePath + " -c";
-    return system(command.c_str()) == 0;
+    return runCommand(command) == 0;   // <-- replaced system()
 }
 
 std::string Runner::findInstrumentedFile(const std::string& origFile) {
@@ -95,8 +101,10 @@ std::string Runner::findInstrumentedFile(const std::string& origFile) {
 }
 
 int Runner::runZ3(const std::string& instrumentedFile, const std::string& originalFile) {
-    std::string command = toolDir + "/run-gl-and-z3.sh " + instrumentedFile + " " + originalFile;
-    return system(command.c_str()) / 256; // convert shell exit to C++ return code
+    std::cout << "\nInput File is : " << instrumentedFile << std::endl;
+    std::cout << "\n CBMC instrumentation\n" << std::endl;
+
+    return run_gl_and_z3(instrumentedFile, originalFile);
 }
 
 std::string Runner::getFileName(const std::string& path) {
@@ -110,10 +118,3 @@ void Runner::cleanup() {
         std::cerr << "Warning: failed to remove temp directory." << std::endl;
     }
 }
-
-//instead of having so many things, 
-// have run system
-// encapsulat the system command 
-// wrapp
-// just call api 
-// runner can also be coded 

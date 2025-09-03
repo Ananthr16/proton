@@ -96,5 +96,3 @@ std::string Options::getOptionFlags() const {
 
     return "";
 }
-
-

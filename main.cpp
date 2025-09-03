@@ -8,7 +8,7 @@
 
 #include "Options.h"
 #include "parse.h"
-#include "Runner.h"  // <- NEW include for full pipeline
+#include "runner.h" 
 
 int main(int argc, char* argv[]) {
     if (argc != 3) {

@@ -1,52 +1,50 @@
 #include <iostream>
-#include <cstdlib>
 #include <string>
 #include <filesystem>
 #include <fstream>
-#include <sstream>
+#include <cstdlib>
+#include "utils.h"   // use our wrapper
 
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: ./run-gl-uw <source_file.c> <unwind>" << std::endl;
-        return 1;
-    }
-
-    std::string infile = argv[1];
-    std::string unwind = argv[2];
-
+int run_gl_uw(const std::string& infile, const std::string& unwind) {
     std::cout << "UNWIND=" << unwind << std::endl;
 
-    std::string command = "cbmc --$BIT_WIDTH --unwind " + unwind +
+    const char* bw_env = std::getenv("BIT_WIDTH");
+    std::string bitWidth = bw_env ? std::string("--object-bits ") + bw_env : "--object-bits 16";
+
+    std::string command = "cbmc " + bitWidth + " --unwind " + unwind +
                           " -D __VERIFIER_assert=orignial__VERIFIER_assert "
                           "-D __assert_fail=original__assert_fail --no-built-in-assertions "
-                          "--stop-on-fail --object-bits 16 " + infile +
+                          "--stop-on-fail " + infile +
                           " --compact-trace --trace-show-function-calls";
 
     std::cout << command << std::endl;
 
-    int ev = system(command.c_str());
+    // Use wrapper instead of raw system()
+    int ev = runCommand(command);
 
     std::cout << "EXIT STATUS is " << ev << std::endl;
 
     if (ev == 10) {
-        std::string home = std::getenv("HOME");
-        std::filesystem::path logFilePath = std::filesystem::path(home) / "temp" / "x.txt";
-
-        std::ofstream logFile(logFilePath, std::ios::app);
-        if (logFile.is_open()) {
-            logFile << infile << " RECURRENT STATE FOUND AT UNWIND " << unwind << std::endl;
-        } else {
-            std::cerr << "Failed to write to " << logFilePath << std::endl;
+        const char* home = std::getenv("HOME");
+        if (home) {
+            std::filesystem::path logFilePath = std::filesystem::path(home) / "temp" / "x.txt";
+            std::ofstream logFile(logFilePath, std::ios::app);
+            if (logFile.is_open()) {
+                logFile << infile << " RECURRENT STATE FOUND AT UNWIND " << unwind << std::endl;
+            } else {
+                std::cerr << "Failed to write to " << logFilePath << std::endl;
+            }
         }
-
         return ev;
     }
 
     if (ev == 137) {
-        std::cout << infile << " RECURRENT STATE NOFOUND AT UNWIND " << unwind << ". OUT OF MEMORY" << std::endl;
+        std::cout << infile << " RECURRENT STATE NOFOUND AT UNWIND " << unwind
+                  << ". OUT OF MEMORY" << std::endl;
         return ev;
     }
 
-    std::cout << infile << " RECURRENT STATE NOTFOUND AT UNWIND " << unwind << " echo " << ev << std::endl;
+    std::cout << infile << " RECURRENT STATE NOTFOUND AT UNWIND " << unwind
+              << " echo " << ev << std::endl;
     return ev;
 }
